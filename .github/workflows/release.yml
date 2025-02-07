@@ -1,0 +1,51 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*' # Запуск при пуше тега (например, v1.0.0)
+
+jobs:
+  build:
+    runs-on: windows-latest # Используем Windows
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21' # Укажите нужную версию Go
+
+      - name: Build executable
+        run: |
+          go env -w GOOS=windows GOARCH=amd64
+          go build -o emulator.exe main.go
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: emulator
+          path: emulator.exe
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest # Релиз можно делать на Linux
+
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: emulator
+          path: .
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: emulator.exe
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref_name }}
+          draft: false
+          prerelease: false
